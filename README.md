@@ -10,7 +10,7 @@ You can install the package and its dependencies using `pip`:
 $ pip install .
 ```
 
-This will install the command-line executable `pcf`.
+This will install the command-line executable `pcf`. Because Planet Coverage Finder uses version 1.5 of the Planet Python client, it is recommended that authentication be done by setting the `PL_API_KEY` environment variable with your API key.
 
 # Usage
 
@@ -63,7 +63,7 @@ The default search assumes that the user needs 100% coverage on a single day and
 ```
   -c, --max-clouds INTEGER RANGE  Maximum cloud cover percentage.  [0<=x<=100]
   -C, --confidence INTEGER RANGE  Required confidence when using UDM-based cloudiness checks.  [0<=x<=100]
-  -m, --mask-types [cloud|shadow|lighthaze|heavyhaze|snow]
+  -m, --mask-types [cloud|shadow|haze|snow]
   				  UDM2 types to consider when evaluating cloudiness of images.
   -f, --frame INTEGER RANGE       Time frame in days to search for acceptable data (all images will be captured within this many days of one another).  [x>=1]
   -q, --image-quality [all|standard|preferential]
@@ -72,7 +72,7 @@ The default search assumes that the user needs 100% coverage on a single day and
   -t, --min-cover INTEGER RANGE   Required coverage percentage.  [1<=x<=100]
 ```
 
-If one or more `-m` parameters are used, then `pcf` will use the UDM file to calcualte the exact cloudiness and confidence score; if no `-m` parameters are provided, it will estimate cloudiness based on the scene-level metadata, with a confidence of 0.
+If one or more `-m` parameters are used, then `pcf` will use the Usable Data Mask (UDM) file to calcualte the exact cloudiness and confidence score; if no `-m` parameters are provided, it will estimate cloudiness based on the scene-level metadata, with a confidence of at least 0. `pcf` uses UDM version 2.1, and therefore does not accept `lighthaze` or `heavyhaze` as parameters.
 
 By default, images of all qualities will be considered, but images that were automatically assessed to be `test` quality will only be added to the coverage if there are no images of `standard` quality available. By setting `--image-quality` to `standard`, `test` images will be excluded, and by using `all`, the tool will not distinguish between different image qualities.
 
@@ -80,20 +80,19 @@ Using the `--frame` parameter will perform a search over a rolling window of mul
 
 ## Ordering the images
 
-Planet Coverage Finder can also create and download an order for each feature.
+Planet Coverage Finder can also create an order for each feature.
 
 ```
   --order / --no-order            Submit an order for scenes.
-  -b, --bundle TEXT               Bundles to download.
-  -d, --download                  Download orders.
+  -b, --bundle TEXT               Bundles to order.
   -e, --email                     Send email for each order.
   -r, --reproject INTEGER         Reproject to a specific SRS (or no reprojection if set to 0).
 ```
 
-**WARNING: The tool will only clip the images to the original search area. In the example image above, three images would be ordered, each clipped to the same large rectangle.**
+**WARNING: The tool will only clip the images to the original search area. In the example image above, three images would be ordered, each clipped to the same large rectangle. This could lead to unexpected quota charges.**
 
 ## Example
 
-The following command, will find imagery for each feature in `aoi.geojson` in September 2019. The features must be at least 90% covered by imagery and the imagery must be at most 10% cloudy (defined as heavy haze or clouds). A GeoJSON file will contain the geometries of PlanetScope imagery used to successfully provide a coverage over each feature, and a QGIS project will be created to view the results. Finally, it will download each of the images used to create the coverage, clipped to the original feature.
+The following command, will find imagery for each feature in `aoi.geojson` in September 2019. The features must be at least 90% covered by imagery and the imagery must be at most 10% cloudy (defined as haze or clouds). A GeoJSON file will contain the geometries of PlanetScope imagery used to successfully provide a coverage over each feature, and a QGIS project will be created to view the results.
 
-`pcf aoi.geojson 2019-09-01 2019-09-30 -c 10 -t 90 -m heavyhaze -m cloud --qgis -d`
+`pcf aoi.geojson 2019-09-01 2019-09-30 -c 10 -t 90 -m haze -m cloud --qgis`

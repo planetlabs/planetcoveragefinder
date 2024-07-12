@@ -31,15 +31,14 @@ from tqdm import tqdm
 MASK_BANDS = {
     "snow": 1,
     "shadow": 2,
-    "lighthaze": 3,
-    "heavyhaze": 4,
+    "haze" : 3,
     "cloud": 5
 }
 
 def create_usable_features(aoi, tiles, order_id, zip_file):
     features = []
     for tile in tiles:
-        properties = {"order": order_id, "aoi": aoi.id, "downloads": zip_file, "clouds": tile.clouds, "confidence": tile.confidence}
+        properties = {"order": order_id, "aoi": aoi.id, "clouds": tile.clouds, "confidence": tile.confidence}
         features.append({"geometry": tile.geojson,
                "id": tile.id,
                "type": "Feature",
@@ -112,11 +111,10 @@ def create_tile_service(tiles):
 @click.option("--order/--no-order", default=False, help="Submit an order for scenes.")
 @click.option("--status/--no-status", default=False, help="Use a status bar for display.")
 @click.option("-a", "--attribute", default=None, help="Attribute to uniquely identify features.")
-@click.option("-b", "--bundle", default="analytic_sr_udm2,analytic_udm2", help="Bundles to download.")
+@click.option("-b", "--bundle", default="analytic_sr_udm2,analytic_udm2", help="Bundles to order.")
 @click.option("-c", "--max-clouds", default=100, type=click.IntRange(0, 100), help="Maximum cloud-cover percentage.")
 @click.option("-C", "--confidence", default=0, type=click.IntRange(0, 100), help="Required confidence when using UDM-based cloudiness checks.")
-@click.option("-m", "--mask-types", default=[], type=click.Choice(["cloud", "shadow", "lighthaze", "heavyhaze", "snow"]), multiple=True, show_default=True, help="UDM2 types to consider when evaluating cloudiness of images. If no types are specified, a cloudiness estimate based on the scene-level metadata will be used instead.")
-@click.option("-d", "--download", is_flag=True, help="Download orders.")
+@click.option("-m", "--mask-types", default=[], type=click.Choice(["cloud", "shadow", "haze", "snow"]), multiple=True, show_default=True, help="UDM2.1 types to consider when evaluating cloudiness of images. If no types are specified, a cloudiness estimate based on the scene-level metadata will be used instead.")
 @click.option("-e", "--email", is_flag=True, default=False, help="Send email for each order.")
 @click.option("-f", "--frame", default=1, type=click.IntRange(min=1), help="Time frame in days to search for acceptable data (all images will be captured within this many days of one another).")
 @click.option("-l", "--limit", default=0, type=click.INT, help="Maximum number of features to read from the input file.")
@@ -132,7 +130,7 @@ def create_tile_service(tiles):
 @click.option("-w", "--wmts", is_flag=True, default=False, help="Create a WMTS tile service URL.")
 @click.option("-v", "--verbosity", count=True, help="Verbosity (repeat for additional messages).")
 def cli(filename, date1, date2, order, status, attribute, bundle, max_clouds, confidence, mask_types, 
-        download, email, frame, geojson_unusable, image_quality, qgis, limit, output, thread_pool, 
+        email, frame, geojson_unusable, image_quality, qgis, limit, output, thread_pool, 
         reproject, satellite, min_cover, xyz, wmts, verbosity):
     if not output:
         output = "{}_pcf".format(Path(filename).stem)
@@ -149,8 +147,9 @@ def cli(filename, date1, date2, order, status, attribute, bundle, max_clouds, co
     else:
         mask_bands = None
 
-    if download:
-        order = True
+    #if download:
+    #    order = True
+    download = False # this has never worked well with the Python client
     crs, features = get_features(filename, attribute, limit)
 
     if status and len(features) + 5 < shutil.get_terminal_size().lines:
@@ -165,7 +164,7 @@ def cli(filename, date1, date2, order, status, attribute, bundle, max_clouds, co
     aois = [AOI(*feature) for feature in features]
 
     dates = create_date_range(date1, date2)
-    if reproject == 0:
+    if reproject == 0 or reproject is None:
         crs = None
     elif reproject:
         crs = "epsg:{}".format(reproject)
